@@ -1,0 +1,520 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Analyze this customer complaint.\n\nComplaint:\n{{ $json.Complaint }}\n\nClassify urgency as high, medium, or low.\n\nRules:\n- High = account access, billing failure, security, urgent business impact\n- Medium = service issues, delays\n- Low = general questions\n- Create a Unique Ticket number with numbers and both upper case and lower case letter characters(8 Characters Long)\n\nReturn ONLY JSON:\n\n{\n  \"ai_urgency\": \"\",\n  \"summary\": \"\",\n  \"Ticket Number\": \"\"\n}\n"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "b77841ef-e832-449a-bb0f-807e9c2a653a",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "5H9Fdmacykx9N48l",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "let raw = $json.output[0].content[0].text;\n\nraw = raw.replace(/```json/g, '').replace(/```/g, '').trim();\n\nconst parsed = JSON.parse(raw);\nconst form = $('On form submission').item.json;\n\n// normalize urgency\nconst urgency = parsed.ai_urgency.toLowerCase();\n\n// generate ticket ID\nconst ticketId = \"TICKET-\" + Math.floor(100000 + Math.random() * 900000);\n\nreturn [\n  {\n    json: {\n      ticketId: ticketId,\n      Name: form.Name,\n      Email: form.Email,\n      Complaint: form.Complaint,\n      ai_urgency: urgency,\n      summary: parsed.summary\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        0
+      ],
+      "id": "f5ab5c37-b782-4d45-9437-d1a42fa858b9",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "formTitle": "Customer Service",
+        "formDescription": "Please provide the following details:",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Name",
+              "placeholder": "John Doe"
+            },
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email"
+            },
+            {
+              "fieldLabel": "Complaint"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [
+        -48,
+        0
+      ],
+      "id": "a46c7ef2-7d43-42f4-a1b2-7b8da42965e0",
+      "name": "On form submission",
+      "webhookId": "41624313-1c24-4fea-89bd-f2b6d226a3f8"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.ai_urgency }}",
+                    "rightValue": "high",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "eef8adf5-1d30-4c4f-ba79-9aa7c889ab41"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "High Urgency"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "7040feb3-8d00-417e-b443-d074f866926e",
+                    "leftValue": "={{ $json.ai_urgency }}",
+                    "rightValue": "=medium",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Medium Urgency"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "0f3d32a6-4289-46f5-9a1e-fc36c2271900",
+                    "leftValue": "={{ $json.ai_urgency }}",
+                    "rightValue": "low",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Low Urgency"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        768,
+        0
+      ],
+      "id": "d405fa4b-ef02-41d0-9f3c-eb7a1eb0f571",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0AEA5R7W1E",
+          "mode": "list",
+          "cachedResultName": "all-project"
+        },
+        "text": "=🚨 {{$json.ai_urgency.toUpperCase()}} URGENCY\n\nName: {{$json.Name}}\nEmail: {{$json.Email}}\nComplaint: {{$json.Complaint}}\nTicket Number: {{ $json.ticketId }}\n\nAI Summary: {{$json.summary}}\n",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1056,
+        -416
+      ],
+      "id": "192fe87b-7ed5-4cca-94b1-5686bae0c09e",
+      "name": "Send a message",
+      "webhookId": "3aee81fa-33a4-49af-b23a-61062bba3fa3",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "BhbcLmiGx8D7UCYR",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0AEA5R7W1E",
+          "mode": "list",
+          "cachedResultName": "all-project"
+        },
+        "text": "=🚨 {{$json.ai_urgency.toUpperCase()}} URGENCY  Name: {{$json.Name}} Email: {{$json.Email}} Complaint: {{$json.Complaint}} \nTicket Number: {{ $json.ticketId }}\n\nAI Summary: {{$json.summary}}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1056,
+        272
+      ],
+      "id": "5f4ca78d-e6ff-4ddf-bd75-52a95edbe23d",
+      "name": "Send a message1",
+      "webhookId": "82cd3c79-8bc3-477d-8cfb-b55db93f760b",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "BhbcLmiGx8D7UCYR",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0AEA5R7W1E",
+          "mode": "list",
+          "cachedResultName": "all-project"
+        },
+        "text": "=🚨 {{$json.ai_urgency.toUpperCase()}} URGENCY  Name: {{$json.Name}} Email: {{$json.Email}} Complaint: {{$json.Complaint}}\nTicket Number: {{ $json.ticketId }}\n\nAI Summary: {{$json.summary}}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1056,
+        -80
+      ],
+      "id": "99d7e430-63a0-480d-86b6-6619abf1fccc",
+      "name": "Send a message2",
+      "webhookId": "bd9ac6a3-3e77-4e1c-990e-5a985a61c925",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "BhbcLmiGx8D7UCYR",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "jmsdude@icloud.com",
+        "subject": "Service Request",
+        "message": "=Hi  {{ $json.Name }},\n\nYour complaint has been deemed: {{ $json.ai_urgency }}.\nYour ticket number is: {{ $json.ticketId }}\n\nWe have recieved your service request ad will respond within 24 hrs.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1056,
+        -272
+      ],
+      "id": "b77ef680-1014-436e-a05d-a4b06831c998",
+      "name": "Send a message3",
+      "webhookId": "42b69fbe-6ab1-42c0-ab56-03db5f9c55e0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "mPJcLys2i0AKbYwg",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.Email }}",
+        "subject": "Service Request",
+        "message": "=Hi  {{ $json.Name }},  \nYour complaint has been deemed: {{ $json.ai_urgency }}. \nYour ticket number is: {{ $json.ticketId }}\nWe have recieved your service request ad will respond within 2 business days.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1056,
+        80
+      ],
+      "id": "17b265d9-cfa7-4930-a614-3763dccb1c55",
+      "name": "Send a message4",
+      "webhookId": "471d8b07-48ec-4164-a1ec-13da327378fc",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "mPJcLys2i0AKbYwg",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.Email }}",
+        "subject": "Service Request",
+        "message": "=Hi  {{ $json.Name }}, \n\nYour complaint has been deemed: {{ $json.ai_urgency }}.\nTicket Number: {{ $json.ticketId }}\n\nWe have recieved your service request ad will respond within 3 business days.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1040,
+        448
+      ],
+      "id": "fe803fc8-9ccd-4857-abbe-61a56fca3165",
+      "name": "Send a message5",
+      "webhookId": "13660d65-db0a-4fde-892a-fc1f56511b81",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "mPJcLys2i0AKbYwg",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1yiUkTVnC-CFh06VRzlQ2sFMJ0e42ZtAzWR5C7EnCHng",
+          "mode": "list",
+          "cachedResultName": "Ai SaaS",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1yiUkTVnC-CFh06VRzlQ2sFMJ0e42ZtAzWR5C7EnCHng/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1yiUkTVnC-CFh06VRzlQ2sFMJ0e42ZtAzWR5C7EnCHng/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $json.Name }}",
+            "Email": "={{ $json.Email }}",
+            "Urgency": "={{ $json.ai_urgency }}",
+            "Summary": "={{ $json.summary }}",
+            "Ticket Number": "={{ $json['Ticket Number'] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Urgency",
+              "displayName": "Urgency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Ticket Number",
+              "displayName": "Ticket Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        736,
+        336
+      ],
+      "id": "f7c688fd-881e-4cfc-a3fc-cbe31947c3ca",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "q5tfVGGFg0JK97sq",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a message3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a message4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a message5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "eb0a5597-aac2-4ec0-a118-57a9c7014a0e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b747aa007b26565221206bffb49fba0c0b12020dd7b4df87107729bd4c0a55c6"
+  },
+  "id": "vZ-JIt3G4s5PjiX_4gXMr",
+  "tags": []
+}
