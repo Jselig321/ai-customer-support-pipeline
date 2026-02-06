@@ -41,7 +41,7 @@ This architecture demonstrates how AI can function as a decision layer inside re
 ![Sheets](screenshots/Google%20Sheets.png)
 
 ### Slack Alert
-![Slack](screenshots/Slack%20proof.png)
+![Slack](screenshots/Slack%20Proof.png)
 
 ### Customer Email Confirmation
 ![Email](screenshots/Email%20Proof.png)
