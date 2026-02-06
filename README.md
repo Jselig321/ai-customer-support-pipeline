@@ -1,5 +1,5 @@
 # ai-customer-support-pipeline
-AI-powered support intake and ticket routing system built with n8n + OpenAI + Google Sheets
+> A real-world AI workflow that automates customer support triage using n8n and OpenAI.
 
 
 
